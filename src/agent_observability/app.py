@@ -5,7 +5,6 @@ import prometheus_client
 from typing import Callable
 from pydantic import BaseModel
 from fastapi import FastAPI, Request, Body
-from contextlib import asynccontextmanager
 
 from agent_observability import trace, agent
 
@@ -19,13 +18,7 @@ fastapi_app = FastAPI(
 )
 
 dotenv.load_dotenv()
-
-
-@asynccontextmanager
-async def lifespan(_app: FastAPI):
-    prometheus_client.start_http_server(9464)
-
-    yield
+prometheus_client.start_http_server(9464)
 
 
 @fastapi_app.middleware("http")
