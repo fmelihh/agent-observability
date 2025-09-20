@@ -106,7 +106,7 @@ This starts:
 ### 5. Run the Agent API
 
 ```bash
-api
+uv run api
 ```
 
 The API will be available at http://localhost:8000
