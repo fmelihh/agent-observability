@@ -39,6 +39,16 @@ error_counter = meter.create_counter(
     "llm_errors", description="Number of errors during LLM execution"
 )
 
+api_latency = meter.create_histogram(
+    "external_api_latency_seconds",
+    description="Latency of external API calls",
+    unit="s",
+)
+api_calls_counter = meter.create_counter(
+    "external_api_calls_total",
+    description="Total number of external API calls",
+)
+
 
 __all__ = [
     "tracer",
@@ -46,4 +56,6 @@ __all__ = [
     "tokens_in_counter",
     "tokens_out_counter",
     "error_counter",
+    "api_latency",
+    "api_calls_counter",
 ]
