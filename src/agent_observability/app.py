@@ -51,11 +51,11 @@ async def root():
 
 @fastapi_app.get("/external-api-call")
 def call_external_api():
-    time.sleep(random.uniform(0.1, 0.5))
+    time.sleep(random.randint(1, 5))
     return "External API call was triggered."
 
 
 @fastapi_app.get("/external-api-high-latency")
 def call_external_api_high_latency():
-    time.sleep(random.randint(15, 40))
+    time.sleep(random.randint(30, 50))
     return "External API call with high latency was triggered."
