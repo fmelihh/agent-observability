@@ -26,9 +26,6 @@ metrics.set_meter_provider(meter_provider)
 meter = metrics.get_meter("llm_agent_meter")
 
 # Define metrics
-request_latency = meter.create_histogram(
-    "llm_request_latency_seconds", unit="s", description="Latency of LLM requests"
-)
 tokens_in_counter = meter.create_counter(
     "llm_tokens_in", description="Number of input tokens"
 )
@@ -44,9 +41,17 @@ api_latency = meter.create_histogram(
     description="Latency of external API calls",
     unit="s",
 )
-api_calls_counter = meter.create_counter(
-    "external_api_calls_total",
-    description="Total number of external API calls",
+
+request_counter = meter.create_counter(
+    "http_requests_total",
+    description="Total number of HTTP requests",
+)
+
+# latency histogram (per endpoint/method/status)
+request_latency = meter.create_histogram(
+    "http_request_latency_seconds",
+    description="Latency of HTTP requests",
+    unit="s",
 )
 
 
@@ -57,5 +62,5 @@ __all__ = [
     "tokens_out_counter",
     "error_counter",
     "api_latency",
-    "api_calls_counter",
+    "request_counter",
 ]

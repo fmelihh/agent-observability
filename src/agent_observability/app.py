@@ -33,15 +33,13 @@ async def observability_middleware(request: Request, call_next: Callable):
         span.set_attribute("http.duration_ms", duration * 1000)
 
         # ---- Record Metrics ----
-        trace.request_latency.record(duration)
-        trace.api_calls_counter.add(
-            1,
-            {
-                "method": request.method,
-                "route": request.url.path,
-                "status_code": response.status_code,
-            },
-        )
+        labels = {
+            "method": request.method,
+            "route": request.url.path,
+            "status_code": response.status_code,
+        }
+        trace.request_latency.record(duration, labels)
+        trace.request_counter.add(1, labels)
 
         return response
 
