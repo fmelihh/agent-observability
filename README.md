@@ -156,6 +156,8 @@ Response:
 
 Access Grafana at http://localhost:3000 with credentials `admin/admin`.
 
+![Grafana Dashboard](static/grafana.png)
+
 **Key Metrics to Monitor:**
 - Request rate and latency percentiles
 - Token usage trends and costs
