@@ -1,24 +1,46 @@
 import time
-from typing import Dict, Any
+import httpx
+from typing import TypedDict
 from langgraph.graph import StateGraph, END
 from langchain_openai import ChatOpenAI
 from agent_observability import trace  # your OTel setup
 
 
 # --- Define State for LangGraph ---
-class AgentState(Dict[str, Any]):
-    pass
+class AgentState(TypedDict):
+    input: str
+    llm_output: str
+    final_answer: str
 
 
-# --- Tool Node ---
+# --- Tool Node: Real Weather API ---
 async def get_weather(city: str) -> str:
     with trace.tracer.start_as_current_span("tool.get_weather") as span:
         start = time.time()
         try:
-            # Fake external API latency
-            time.sleep(0.3)
-            result = f"The weather in {city} is Sunny, 22°C."
+            # Very simple hardcoded city mapping for demo
+            coords = {
+                "paris": (48.8566, 2.3522),
+                "london": (51.5074, -0.1278),
+                "new york": (40.7128, -74.0060),
+            }
+            lat, lon = coords.get(city.lower(), (48.8566, 2.3522))  # default Paris
 
+            url = (
+                f"https://api.open-meteo.com/v1/forecast?"
+                f"latitude={lat}&longitude={lon}&current_weather=true"
+            )
+
+            async with httpx.AsyncClient() as client:
+                resp = await client.get(url)
+                data = resp.json()
+                current = data.get("current_weather", {})
+                result = (
+                    f"The weather in {city.title()} is {current.get('temperature')}°C, "
+                    f"windspeed {current.get('windspeed')} km/h."
+                )
+
+            # record API latency metric
             duration = time.time() - start
             trace.api_latency.record(duration, {"tool": "get_weather"})
 
@@ -31,15 +53,29 @@ async def get_weather(city: str) -> str:
             raise
 
 
-# --- LLM Node ---
+# --- LLM Node with System Prompt ---
 async def llm_node(state: AgentState) -> AgentState:
     with trace.tracer.start_as_current_span("llm.prompt_execution") as span:
+        # Add system prompt here
         llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
         user_input = state["input"]
 
         try:
             start = time.time()
-            response = llm.invoke(user_input)
+
+            # Provide system + user roles
+            response = llm.invoke(
+                [
+                    {
+                        "role": "system",
+                        "content": "You are a helpful AI assistant. "
+                        "If a query is about weather, respond with TOOL:city. "
+                        "Otherwise, answer directly.",
+                    },
+                    {"role": "user", "content": user_input},
+                ]
+            )
+
             duration = time.time() - start
 
             # Token usage (if available)
@@ -74,7 +110,7 @@ async def weather_node(state: AgentState) -> AgentState:
         if output.startswith("TOOL:"):
             city = output.split(":", 1)[1].strip()
             span.set_attribute("decision", "tool_call")
-            state["final_answer"] = get_weather(city)
+            state["final_answer"] = await get_weather(city)
         else:
             span.set_attribute("decision", "direct_response")
             state["final_answer"] = output
@@ -82,8 +118,6 @@ async def weather_node(state: AgentState) -> AgentState:
 
 
 # --- Build LangGraph Workflow ---
-
-
 async def build_graph():
     workflow = StateGraph(AgentState)
     workflow.add_node("llm", llm_node)

@@ -3,10 +3,16 @@ import random
 import dotenv
 import prometheus_client
 from typing import Callable
-from fastapi import FastAPI, Request
+from pydantic import BaseModel
+from fastapi import FastAPI, Request, Body
 from contextlib import asynccontextmanager
 
 from agent_observability import trace, agent
+
+
+class AgentInputDTO(BaseModel):
+    query: str
+
 
 fastapi_app = FastAPI(
     title="Agent Observability",
@@ -73,15 +79,12 @@ def call_external_api_high_latency():
 
 
 @fastapi_app.post("/agent-call")
-async def agent_call(request: Request):
-    body = await request.json()
-    user_input = body.get("query", "")
-
+async def agent_call(agent_input: AgentInputDTO = Body(...)):
     with trace.tracer.start_as_current_span("agent.request") as span:
-        span.set_attribute("user.query", user_input)
+        span.set_attribute("user.query", agent_input.query)
         app_graph = await agent.build_graph()
-        result = app_graph.ainvoke({"input": user_input})
+        result = app_graph.ainvoke({"input": agent_input.query})
         answer = result.get("final_answer", "")
 
         span.set_attribute("agent.response", answer)
-        return {"query": user_input, "response": answer}
+        return {"query": agent_input.query, "response": answer}
