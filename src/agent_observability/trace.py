@@ -47,7 +47,6 @@ request_counter = meter.create_counter(
     description="Total number of HTTP requests",
 )
 
-# latency histogram (per endpoint/method/status)
 request_latency = meter.create_histogram(
     "http_request_latency_seconds",
     description="Latency of HTTP requests",
