@@ -1,13 +1,24 @@
 import time
 import random
+import dotenv
+import prometheus_client
 from typing import Callable
 from fastapi import FastAPI, Request
+from contextlib import asynccontextmanager
 
 from agent_observability import trace
 
 fastapi_app = FastAPI(
     title="Agent Observability",
 )
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    dotenv.load_dotenv()
+    prometheus_client.start_http_server(9464)
+
+    yield
 
 
 @fastapi_app.middleware("http")
@@ -59,3 +70,8 @@ def call_external_api():
 def call_external_api_high_latency():
     time.sleep(random.randint(30, 50))
     return "External API call with high latency was triggered."
+
+
+@fastapi_app.post("/agent-call")
+async def agent_call(request: Request):
+    pass
