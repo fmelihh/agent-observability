@@ -18,10 +18,11 @@ fastapi_app = FastAPI(
     title="Agent Observability",
 )
 
+dotenv.load_dotenv()
+
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
-    dotenv.load_dotenv()
     prometheus_client.start_http_server(9464)
 
     yield
@@ -83,7 +84,7 @@ async def agent_call(agent_input: AgentInputDTO = Body(...)):
     with trace.tracer.start_as_current_span("agent.request") as span:
         span.set_attribute("user.query", agent_input.query)
         app_graph = await agent.build_graph()
-        result = app_graph.ainvoke({"input": agent_input.query})
+        result = await app_graph.ainvoke({"input": agent_input.query})
         answer = result.get("final_answer", "")
 
         span.set_attribute("agent.response", answer)
